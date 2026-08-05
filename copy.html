@@ -1,0 +1,1857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Rich Text Notes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+
+        .status-bar {
+            background: #e8f4fd;
+            padding: 8px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            border-bottom: 1px solid #bee5eb;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: #dc3545;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .toolbar {
+            background: #f8f9fa;
+            padding: 15px 30px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.secondary:hover:not(:disabled) {
+            background: #545b62;
+        }
+
+        .btn.success {
+            background: #28a745;
+        }
+
+        .btn.success:hover:not(:disabled) {
+            background: #1e7e34;
+        }
+
+        .btn.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn.warning:hover:not(:disabled) {
+            background: #e0a800;
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .btn.danger:hover:not(:disabled) {
+            background: #c82333;
+        }
+
+        .format-controls {
+            display: flex;
+            gap: 5px;
+            margin-right: 15px;
+            padding-right: 15px;
+            border-right: 1px solid #dee2e6;
+        }
+
+        .word-count {
+            margin-left: auto;
+            color: #6c757d;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .mode-toggle {
+            background: #17a2b8;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        .mode-toggle:hover:not(:disabled) {
+            background: #138496;
+        }
+
+        .editor-container {
+            position: relative;
+            height: calc(100vh - 260px);
+            min-height: 400px;
+        }
+
+        .editor {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            padding: 30px;
+            font-size: 16px;
+            line-height: 1.6;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .editor:focus {
+            background: #fdfdfd;
+        }
+
+        .editor[contenteditable="true"] {
+            font-family: 'Georgia', 'Times New Roman', serif;
+        }
+
+        .editor textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            padding: 0;
+            font-size: 16px;
+            line-height: 1.6;
+            font-family: 'Courier New', monospace;
+            resize: none;
+            background: transparent;
+        }
+
+        .placeholder {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            color: #adb5bd;
+            pointer-events: none;
+            font-size: 16px;
+            line-height: 1.6;
+            font-family: 'Georgia', 'Times New Roman', serif;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 15px 30px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 12px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #666;
+        }
+
+        /* Preserve all formatting styles */
+        .editor h1, .editor h2, .editor h3, .editor h4, .editor h5, .editor h6 {
+            margin: 0.5em 0;
+            font-weight: bold;
+        }
+
+        .editor p {
+            margin: 0.5em 0;
+        }
+
+        .editor ul, .editor ol {
+            margin: 0.5em 0;
+            padding-left: 2em;
+        }
+
+        .editor blockquote {
+            border-left: 4px solid #ddd;
+            margin: 1em 0;
+            padding-left: 1em;
+            color: #666;
+        }
+
+        .editor code {
+            background: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .editor pre {
+            background: #f8f9fa;
+            padding: 1em;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1em 0;
+        }
+
+        .editor table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+
+        .editor table th, .editor table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .editor table th {
+            background: #f8f9fa;
+        }
+
+        .editor .section {
+            margin: 1em 0;
+            padding: 1em;
+            border-left: 3px solid #007bff;
+            background: #f8f9fa;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+                font-size: 14px;
+            }
+
+            .container {
+                border-radius: 8px;
+            }
+
+            .header, .toolbar, .status-bar {
+                padding: 10px 15px;
+            }
+
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .header p {
+                font-size: 12px;
+            }
+
+            .editor {
+                padding: 15px;
+                min-height: 300px;
+            }
+
+            .placeholder {
+                top: 15px;
+                left: 15px;
+                font-size: 14px;
+            }
+
+            .toolbar {
+                flex-wrap: wrap;
+                gap: 5px;
+                justify-content: flex-start;
+            }
+
+            .btn {
+                font-size: 11px;
+                padding: 6px 10px;
+                margin: 2px;
+            }
+
+            .word-count {
+                margin-left: 0;
+                margin-top: 10px;
+                flex-basis: 100%;
+                text-align: center;
+                font-size: 11px;
+            }
+
+            .format-controls {
+                margin-right: 0;
+                padding-right: 0;
+                border-right: none;
+                margin-bottom: 5px;
+                flex-wrap: wrap;
+            }
+
+            .status-bar {
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+
+            .users-panel {
+                justify-content: center;
+            }
+
+            .user-indicator {
+                width: 16px;
+                height: 16px;
+                font-size: 7px;
+            }
+
+            /* Mobile chat panel */
+            .chat-panel {
+                width: calc(100vw - 10px);
+                height: 350px;
+                right: 5px;
+                bottom: 5px;
+                left: 5px;
+                border-radius: 8px;
+            }
+
+            .chat-panel.minimized {
+                height: 40px;
+            }
+
+            .chat-header {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .chat-messages {
+                font-size: 12px;
+                padding: 8px;
+            }
+
+            .chat-input-container {
+                padding: 8px;
+            }
+
+            .chat-input {
+                font-size: 12px;
+                padding: 6px;
+            }
+
+            .chat-send {
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 16px;
+            }
+
+            .btn {
+                font-size: 10px;
+                padding: 5px 8px;
+            }
+
+            .toolbar {
+                justify-content: center;
+            }
+
+            .format-controls {
+                justify-content: center;
+                width: 100%;
+            }
+        }
+
+        /* User Cursors & Avatars */
+        .user-cursor {
+            position: absolute;
+            pointer-events: none;
+            z-index: 1000;
+            transition: all 0.1s ease;
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            position: relative;
+        }
+
+        .user-name {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .user-cursor:hover .user-name {
+            opacity: 1;
+        }
+
+        /* Chat Panel */
+        .chat-panel {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 300px;
+            height: 400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .chat-panel.minimized {
+            height: 50px;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: #007bff;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+
+        .chat-message {
+            margin-bottom: 8px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            background: #f8f9fa;
+            word-wrap: break-word;
+        }
+
+        .chat-message.system {
+            background: #e7f3ff;
+            color: #0066cc;
+            font-style: italic;
+        }
+
+        .chat-input-container {
+            padding: 12px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-input {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .chat-send {
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        /* Dark Mode */
+        .dark-mode {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+
+        .dark-mode .container {
+            background: #2d3436;
+            color: #ddd;
+        }
+
+        .dark-mode .header {
+            background: #636e72;
+        }
+
+        .dark-mode .status-bar {
+            background: #636e72;
+            border-color: #74b9ff;
+        }
+
+        .dark-mode .toolbar {
+            background: #636e72;
+            border-color: #74b9ff;
+        }
+
+        .dark-mode .footer {
+            background: #636e72;
+            border-color: #74b9ff;
+        }
+
+        .dark-mode .editor {
+            background: #2d3436;
+            color: #ddd;
+        }
+
+        .dark-mode .placeholder {
+            color: #74b9ff;
+        }
+
+        .dark-mode .btn {
+            background: #74b9ff;
+        }
+
+        .dark-mode .chat-panel {
+            background: #2d3436;
+            border-color: #636e72;
+        }
+
+        .dark-mode .chat-message {
+            background: #636e72;
+            color: #ddd;
+        }
+
+        .dark-mode .chat-input {
+            background: #636e72;
+            border-color: #74b9ff;
+            color: #ddd;
+        }
+
+        /* Drag & Drop */
+        .drag-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 123, 255, 0.1);
+            border: 3px dashed #007bff;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #007bff;
+            z-index: 100;
+        }
+
+        .drag-overlay.active {
+            display: flex;
+        }
+
+        /* User List */
+        .users-panel {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Search Modal */
+        .search-modal {
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 2000;
+            display: none;
+            min-width: 350px;
+        }
+
+        .search-modal.active {
+            display: block;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .search-buttons {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .search-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .search-btn:hover {
+            background: #0056b3;
+        }
+
+        .search-btn.secondary {
+            background: #6c757d;
+        }
+
+        .search-highlight {
+            background-color: yellow;
+            color: black;
+        }
+
+        .search-current {
+            background-color: orange;
+            color: white;
+        }
+
+        /* Dark mode search */
+        .dark-mode .search-modal {
+            background: #2d3436;
+            border-color: #74b9ff;
+            color: #ddd;
+        }
+
+        .dark-mode .search-input {
+            background: #636e72;
+            border-color: #74b9ff;
+            color: #ddd;
+        }
+
+        /* Typing Indicators */
+        .typing-indicator {
+            font-style: italic;
+            color: #666;
+            font-size: 12px;
+            padding: 5px 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin: 5px;
+            display: none;
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        .dark-mode .typing-indicator {
+            background: #636e72;
+            color: #ddd;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #007bff;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 3000;
+            opacity: 0;
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #28a745;
+        }
+
+        .notification.info {
+            background: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Collaborative Rich Text Notes</h1>
+            <p>Real-time collaborative editing - changes sync across all devices instantly</p>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+            <div class="active-users">
+                <div class="users-panel" id="usersPanel"></div>
+            </div>
+        </div>
+        
+        <div class="toolbar">
+            <div class="format-controls">
+                <button class="btn" onclick="formatText('bold')" title="Bold" id="boldBtn">B</button>
+                <button class="btn" onclick="formatText('italic')" title="Italic" id="italicBtn">I</button>
+                <button class="btn" onclick="formatText('underline')" title="Underline" id="underlineBtn">U</button>
+                <button class="btn" onclick="formatText('removeFormat')" title="Clear Formatting" id="clearFormatBtn">Clear</button>
+            </div>
+            
+            <button class="btn mode-toggle" onclick="toggleMode()" id="modeBtn">HTML Mode</button>
+            <button class="btn" onclick="toggleDarkMode()" id="darkModeBtn">🌙 Dark Mode</button>
+            <button class="btn" onclick="changeUserName()" id="nameBtn">👤 Change Name</button>
+            <button class="btn" onclick="toggleSounds()" id="soundBtn">🔊 Sounds</button>
+            <button class="btn" onclick="selectAllText()" id="selectBtn">Select All</button>
+            <button class="btn secondary" onclick="copyText()" id="copyBtn">Copy All</button>
+            <button class="btn danger" onclick="clearText()" id="clearBtn">Clear All</button>
+            <button class="btn success" onclick="downloadText()" id="downloadBtn">Download HTML</button>
+            <button class="btn warning" onclick="downloadPlainText()" id="downloadTextBtn">Download Text</button>
+            
+            <div class="word-count">
+                <span id="charCount">0</span> chars | <span id="wordCount">0</span> words | <span id="htmlCount">0</span> HTML chars
+            </div>
+        </div>
+        
+        <div class="editor-container">
+            <div class="loading-overlay" id="loadingOverlay">
+                🔄 Loading shared document...
+            </div>
+            <div class="placeholder" id="placeholder">
+                This is a shared document! Changes are synced across all browsers in real-time.<br>
+                Paste your formatted content here and it will be instantly available to everyone.<br>
+                Colors, fonts, bold, italic, headings, lists, and more will be preserved.
+            </div>
+            <div
+                class="editor"
+                id="textEditor"
+                contenteditable="true"
+                oninput="handleInput()"
+                onpaste="handlePaste(event)"
+            ></div>
+            <div class="drag-overlay" id="dragOverlay">
+                📁 Drop files here to upload
+            </div>
+        </div>
+        
+        <div class="footer">
+            Document is automatically saved and synced in real-time. Content persists until someone clicks "Clear All".<br>
+            <small style="opacity: 0.7; margin-top: 8px; display: block;">Created by Carlos Andrade • carlos@perezandrade.com</small>
+        </div>
+    </div>
+
+    <!-- Chat Panel -->
+    <div class="chat-panel" id="chatPanel">
+        <div class="chat-header" onclick="toggleChat()">
+            <span>💬 Chat</span>
+            <span id="chatToggle">−</span>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="typing-indicator" id="typingIndicator"></div>
+        </div>
+        <div class="chat-input-container">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." onkeypress="handleChatKeyPress(event)">
+            <button class="chat-send" onclick="sendChatMessage()">Send</button>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div class="search-modal" id="searchModal">
+        <div class="search-row">
+            <label>Find:</label>
+            <input type="text" class="search-input" id="searchInput" placeholder="Enter text to search...">
+        </div>
+        <div class="search-row">
+            <label>Replace:</label>
+            <input type="text" class="search-input" id="replaceInput" placeholder="Enter replacement text...">
+        </div>
+        <div class="search-buttons">
+            <button class="search-btn" onclick="findNext()">Find Next</button>
+            <button class="search-btn" onclick="findPrevious()">Find Previous</button>
+            <button class="search-btn" onclick="replaceOne()">Replace</button>
+            <button class="search-btn" onclick="replaceAll()">Replace All</button>
+            <button class="search-btn secondary" onclick="closeSearch()">Close</button>
+        </div>
+        <div id="searchStatus" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
+    </div>
+
+    <!-- Notification Container -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Configuration
+        const RECONNECT_DELAY = 1000;
+        let ws;
+        let isUpdatingFromRemote = false;
+        let updateTimeout = null;
+        let isHtmlMode = false;
+        let htmlContent = '';
+
+        // New features
+        let userId = Math.random().toString(36).substr(2, 9);
+        let userName = localStorage.getItem('userName') || 'User-' + userId.substr(0, 4);
+        let userColor = generateUserColor();
+        let connectedUsers = new Map();
+        let isDarkMode = false;
+        let isChatMinimized = false;
+
+        // Search and replace
+        let searchResults = [];
+        let currentSearchIndex = 0;
+        let isSearchOpen = false;
+
+        // Typing indicators
+        let typingTimeout = null;
+        let isTyping = false;
+        let typingUsers = new Set();
+
+        // Notifications and sounds
+        let soundsEnabled = localStorage.getItem('soundsEnabled') !== 'false';
+        
+        // DOM elements
+        const editor = document.getElementById('textEditor');
+        const placeholder = document.getElementById('placeholder');
+        const charCount = document.getElementById('charCount');
+        const wordCount = document.getElementById('wordCount');
+        const htmlCount = document.getElementById('htmlCount');
+        const modeBtn = document.getElementById('modeBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const activeUsers = document.getElementById('activeUsers');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        // New DOM elements
+        const usersPanel = document.getElementById('usersPanel');
+        const darkModeBtn = document.getElementById('darkModeBtn');
+        const soundBtn = document.getElementById('soundBtn');
+        const chatPanel = document.getElementById('chatPanel');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const chatToggle = document.getElementById('chatToggle');
+        const dragOverlay = document.getElementById('dragOverlay');
+
+        // Search elements
+        const searchModal = document.getElementById('searchModal');
+        const searchInput = document.getElementById('searchInput');
+        const replaceInput = document.getElementById('replaceInput');
+        const searchStatus = document.getElementById('searchStatus');
+
+        // Other elements
+        const typingIndicator = document.getElementById('typingIndicator');
+        const notification = document.getElementById('notification');
+
+        // Initialize application
+        initializeApp();
+
+        function initializeApp() {
+            console.log('Connecting to server...');
+            ws = new WebSocket('ws://' + window.location.host);
+
+            ws.onopen = () => {
+                console.log('Connected to WebSocket server.');
+                setConnectionStatus(true);
+                showLoading(false);
+                editor.focus();
+                showToast('Connected! Share this page URL to collaborate.');
+
+                // Send user info to server
+                ws.send(JSON.stringify({
+                    type: 'user_info',
+                    userId: userId,
+                    userName: userName,
+                    userColor: userColor
+                }));
+            };
+
+            ws.onmessage = event => {
+                const message = JSON.parse(event.data);
+                if (message.type === 'load' || message.type === 'update') {
+                    isUpdatingFromRemote = true;
+                    editor.innerHTML = message.content;
+                    updateCounts();
+                    togglePlaceholder();
+                    setTimeout(() => isUpdatingFromRemote = false, 50);
+                } else if (message.type === 'user_count') {
+                    activeUsers.textContent = `Users online: ${message.count}`;
+                } else if (message.type === 'chat') {
+                    addChatMessage(message);
+                } else if (message.type === 'users_update') {
+                    connectedUsers.clear();
+                    message.users.forEach(user => {
+                        connectedUsers.set(user.id, user);
+                    });
+                    updateUsersPanel();
+                } else if (message.type === 'user_joined') {
+                    connectedUsers.set(message.user.id, message.user);
+                    updateUsersPanel();
+                    addChatMessage({
+                        type: 'system',
+                        message: `${message.user.name} joined the chat`
+                    });
+                    showNotification(`${message.user.name} joined`, 'info');
+                } else if (message.type === 'user_left') {
+                    connectedUsers.delete(message.userId);
+                    updateUsersPanel();
+                    addChatMessage({
+                        type: 'system',
+                        message: `User left the chat`
+                    });
+                    showNotification(`User left`, 'info');
+                } else if (message.type === 'typing_start') {
+                    typingUsers.add(message.userName);
+                    updateTypingIndicator();
+                } else if (message.type === 'typing_stop') {
+                    // Find user name by userId (since we only get userId in stop message)
+                    const user = connectedUsers.get(message.userId);
+                    if (user) {
+                        typingUsers.delete(user.name);
+                        updateTypingIndicator();
+                    }
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('Disconnected from WebSocket server.');
+                setConnectionStatus(false);
+                showToast('Disconnected. Retrying to connect...', '#dc3545');
+                setTimeout(initializeApp, RECONNECT_DELAY);
+            };
+
+            ws.onerror = error => {
+                console.error('WebSocket error:', error);
+                setConnectionStatus(false);
+            };
+        }
+
+        function handleInput() {
+            if (isUpdatingFromRemote) return;
+            
+            clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(() => {
+                const content = isHtmlMode ? htmlContent : editor.innerHTML;
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'update', content }));
+                }
+                updateCounts();
+                togglePlaceholder();
+            }, 300);
+        }
+
+        function setConnectionStatus(connected) {
+            if (connected) {
+                statusDot.className = 'status-dot';
+                statusText.textContent = 'Connected - Real-time sync active';
+            } else {
+                statusDot.className = 'status-dot offline';
+                statusText.textContent = 'Offline - Changes will sync when reconnected';
+            }
+        }
+
+        function showLoading(show) {
+            loadingOverlay.style.display = show ? 'flex' : 'none';
+        }
+
+        function updateCounts() {
+            const htmlText = isHtmlMode ? htmlContent : editor.innerHTML;
+            const plainText = isHtmlMode ? 
+                new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent || '' :
+                editor.textContent || editor.innerText || '';
+            
+            const chars = plainText.length;
+            const words = plainText.trim() === '' ? 0 : plainText.trim().split(/\s+/).length;
+            const htmlChars = htmlText.length;
+            
+            charCount.textContent = chars.toLocaleString();
+            wordCount.textContent = words.toLocaleString();
+            htmlCount.textContent = htmlChars.toLocaleString();
+        }
+
+        function togglePlaceholder() {
+            const content = isHtmlMode ? htmlContent : editor.innerHTML;
+            const plainText = isHtmlMode ? 
+                new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent || '' :
+                editor.textContent || editor.innerText || '';
+            
+            const hasContent = content.trim() !== '' && plainText.trim() !== '';
+            placeholder.style.display = hasContent ? 'none' : 'block';
+        }
+
+        function toggleMode() {
+            if (isHtmlMode) {
+                // Switch back to rich text mode
+                editor.innerHTML = htmlContent;
+                editor.contentEditable = true;
+                modeBtn.textContent = 'HTML Mode';
+                modeBtn.style.background = '#17a2b8';
+                editor.style.fontFamily = "'Georgia', 'Times New Roman', serif";
+                isHtmlMode = false;
+                enableButtons(true);
+            } else {
+                // Switch to HTML mode
+                htmlContent = editor.innerHTML;
+                const textarea = document.createElement('textarea');
+                textarea.value = htmlContent;
+                textarea.style.cssText = `
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                    outline: none;
+                    padding: 0;
+                    font-size: 14px;
+                    line-height: 1.4;
+                    font-family: 'Courier New', monospace;
+                    resize: none;
+                    background: transparent;
+                `;
+                textarea.oninput = function() {
+                    htmlContent = this.value;
+                    handleInput();
+                };
+                
+                editor.innerHTML = '';
+                editor.appendChild(textarea);
+                editor.contentEditable = false;
+                modeBtn.textContent = 'Rich Text Mode';
+                modeBtn.style.background = '#dc3545';
+                textarea.focus();
+                isHtmlMode = true;
+                enableButtons(false);
+            }
+            updateCounts();
+            togglePlaceholder();
+        }
+
+        function enableButtons(enabled) {
+            const buttons = ['boldBtn', 'italicBtn', 'underlineBtn', 'clearFormatBtn'];
+            buttons.forEach(id => {
+                document.getElementById(id).disabled = !enabled;
+            });
+        }
+
+        function selectAllText() {
+            if (isHtmlMode) {
+                const textarea = editor.querySelector('textarea');
+                if (textarea) {
+                    textarea.select();
+                    textarea.setSelectionRange(0, 99999);
+                }
+            } else {
+                const range = document.createRange();
+                range.selectNodeContents(editor);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+
+        function copyText() {
+            const content = isHtmlMode ? htmlContent : editor.innerHTML;
+            const plainText = isHtmlMode ? 
+                new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent || '' :
+                editor.textContent || editor.innerText || '';
+                
+            if (content.trim() === '' || plainText.trim() === '') {
+                alert('Nothing to copy!');
+                return;
+            }
+            
+            try {
+                if (navigator.clipboard && navigator.clipboard.write) {
+                    const clipboardItem = new ClipboardItem({
+                        'text/html': new Blob([content], { type: 'text/html' }),
+                        'text/plain': new Blob([plainText], { type: 'text/plain' })
+                    });
+                    navigator.clipboard.write([clipboardItem]).then(() => {
+                        showToast('Rich text copied to clipboard with formatting!');
+                    });
+                } else {
+                    selectAllText();
+                    document.execCommand('copy');
+                    showToast('Content copied to clipboard!');
+                }
+            } catch (err) {
+                selectAllText();
+                showToast('Content selected. Press Ctrl+C to copy.');
+            }
+        }
+
+        function clearText() {
+            if (confirm('Are you sure you want to clear all content? This will affect all users editing this document.')) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'update', content: '' }));
+                }
+                
+                if (isHtmlMode) {
+                    htmlContent = '';
+                    const textarea = editor.querySelector('textarea');
+                    if (textarea) {
+                        textarea.value = '';
+                    }
+                } else {
+                    editor.innerHTML = '';
+                }
+                updateCounts();
+                togglePlaceholder();
+                editor.focus();
+                showToast('Document cleared for all users!');
+            }
+        }
+
+        function downloadText() {
+            const content = isHtmlMode ? htmlContent : editor.innerHTML;
+            const plainText = isHtmlMode ? 
+                new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent || '' :
+                editor.textContent || editor.innerText || '';
+                
+            if (content.trim() === '' || plainText.trim() === '') {
+                alert('Nothing to download!');
+                return;
+            }
+            
+            const htmlDoc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Notes Export</title>
+    <style>
+        body {
+            font-family: Georgia, 'Times New Roman', serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3, h4, h5, h6 { margin: 0.5em 0; }
+        p { margin: 0.5em 0; }
+        ul, ol { margin: 0.5em 0; padding-left: 2em; }
+        blockquote { border-left: 4px solid #ddd; margin: 1em 0; padding-left: 1em; color: #666; }
+        code { background: #f8f9fa; padding: 2px 4px; border-radius: 3px; font-family: 'Courier New', monospace; }
+        pre { background: #f8f9fa; padding: 1em; border-radius: 6px; overflow-x: auto; margin: 1em 0; }
+        table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+        table th, table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        table th { background: #f8f9fa; }
+        .section { margin: 1em 0; padding: 1em; border-left: 3px solid #007bff; background: #f8f9fa; }
+    </style>
+</head>
+<body>
+${content}
+</body>
+</html>`;
+            
+            const blob = new Blob([htmlDoc], { type: 'text/html' });
+            downloadFile(blob, 'collaborative-notes', 'html');
+        }
+
+        function downloadPlainText() {
+            const plainText = isHtmlMode ? 
+                new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent || '' :
+                editor.textContent || editor.innerText || '';
+                
+            if (plainText.trim() === '') {
+                alert('Nothing to download!');
+                return;
+            }
+            
+            const blob = new Blob([plainText], { type: 'text/plain' });
+            downloadFile(blob, 'collaborative-notes', 'txt');
+        }
+
+        function downloadFile(blob, name, extension) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            
+            a.href = url;
+            a.download = `${name}-${timestamp}.${extension}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast(`${extension.toUpperCase()} download started!`);
+        }
+
+        function formatText(command) {
+            if (isHtmlMode) {
+                showToast('Switch to Rich Text mode to use formatting tools');
+                return;
+            }
+            
+            document.execCommand(command, false, null);
+            editor.focus();
+            handleInput();
+        }
+
+        function handlePaste(event) {
+            if (isHtmlMode) return;
+            
+            setTimeout(() => {
+                handleInput();
+                showToast('Formatted content pasted successfully!');
+            }, 10);
+        }
+
+        function showToast(message, color = '#28a745') {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${color};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 6px;
+                font-size: 14px;
+                z-index: 1000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                transition: all 0.3s ease;
+                max-width: 300px;
+                word-wrap: break-word;
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        document.body.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // New feature functions
+        function generateUserColor() {
+            const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function generateUserAvatar(name, color) {
+            return name.charAt(0).toUpperCase();
+        }
+
+        function updateUsersPanel() {
+            usersPanel.innerHTML = '';
+            connectedUsers.forEach((user, id) => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-indicator';
+                userDiv.style.backgroundColor = user.color;
+                userDiv.textContent = generateUserAvatar(user.name, user.color);
+                userDiv.title = user.name;
+                usersPanel.appendChild(userDiv);
+            });
+        }
+
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            darkModeBtn.textContent = isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode';
+            localStorage.setItem('darkMode', isDarkMode);
+        }
+
+        function toggleSounds() {
+            soundsEnabled = !soundsEnabled;
+            soundBtn.textContent = soundsEnabled ? '🔊 Sounds' : '🔇 Muted';
+            localStorage.setItem('soundsEnabled', soundsEnabled);
+            showNotification(soundsEnabled ? 'Sounds enabled' : 'Sounds disabled', 'success');
+        }
+
+        function toggleChat() {
+            isChatMinimized = !isChatMinimized;
+            chatPanel.classList.toggle('minimized', isChatMinimized);
+            chatToggle.textContent = isChatMinimized ? '+' : '−';
+        }
+
+        function changeUserName() {
+            const newName = prompt('Enter your name:', userName);
+            if (newName && newName.trim() !== '') {
+                userName = newName.trim();
+
+                // Update local user info
+                connectedUsers.set(userId, {
+                    id: userId,
+                    name: userName,
+                    color: userColor
+                });
+                updateUsersPanel();
+
+                // Send updated user info to server
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'user_update',
+                        userId: userId,
+                        userName: userName,
+                        userColor: userColor
+                    }));
+                }
+
+                // Save name to localStorage
+                localStorage.setItem('userName', userName);
+
+                showToast(`Name changed to: ${userName}`);
+            }
+        }
+
+        function sendChatMessage() {
+            const message = chatInput.value.trim();
+            if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            ws.send(JSON.stringify({
+                type: 'chat',
+                userId: userId,
+                userName: userName,
+                message: message,
+                timestamp: Date.now()
+            }));
+
+            chatInput.value = '';
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        function addChatMessage(data) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = data.type === 'system' ? 'chat-message system' : 'chat-message';
+
+            if (data.type === 'system') {
+                messageDiv.textContent = data.message;
+            } else {
+                const time = new Date(data.timestamp).toLocaleTimeString('en-US', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                messageDiv.innerHTML = `<strong>${data.userName}</strong> <small>(${time})</small><br>${data.message}`;
+            }
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function setupDragDrop() {
+            let dragCounter = 0;
+
+            editor.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                dragCounter++;
+                dragOverlay.classList.add('active');
+            });
+
+            editor.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+
+            editor.addEventListener('dragleave', (e) => {
+                dragCounter--;
+                if (dragCounter === 0) {
+                    dragOverlay.classList.remove('active');
+                }
+            });
+
+            editor.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dragCounter = 0;
+                dragOverlay.classList.remove('active');
+
+                const files = Array.from(e.dataTransfer.files);
+                files.forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const img = document.createElement('img');
+                            img.src = event.target.result;
+                            img.style.maxWidth = '100%';
+                            img.style.height = 'auto';
+
+                            const selection = window.getSelection();
+                            if (selection.rangeCount > 0) {
+                                const range = selection.getRangeAt(0);
+                                range.deleteContents();
+                                range.insertNode(img);
+                                range.collapse(false);
+                            } else {
+                                editor.appendChild(img);
+                            }
+
+                            handleInput();
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            });
+        }
+
+        // Initialize new features
+        function initializeNewFeatures() {
+            // Load dark mode preference
+            const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+            if (savedDarkMode) {
+                toggleDarkMode();
+            }
+
+            // Load sound preference and update button
+            soundBtn.textContent = soundsEnabled ? '🔊 Sounds' : '🔇 Muted';
+
+            // Add current user
+            connectedUsers.set(userId, {
+                name: userName,
+                color: userColor
+            });
+            updateUsersPanel();
+
+            // Setup drag and drop
+            setupDragDrop();
+
+            // Add initial chat message
+            addChatMessage({
+                type: 'system',
+                message: 'Chat connected! Say hello to other users.'
+            });
+
+            // Show welcome notification
+            setTimeout(() => {
+                showNotification('Welcome! Press Ctrl+F to search, drag images to upload', 'info');
+            }, 2000);
+        }
+
+        // Search and Replace Functions
+        function openSearch() {
+            isSearchOpen = true;
+            searchModal.classList.add('active');
+            searchInput.focus();
+            clearSearchHighlights();
+        }
+
+        function closeSearch() {
+            isSearchOpen = false;
+            searchModal.classList.remove('active');
+            clearSearchHighlights();
+            searchResults = [];
+            currentSearchIndex = 0;
+            searchStatus.textContent = '';
+        }
+
+        function clearSearchHighlights() {
+            const highlights = editor.querySelectorAll('.search-highlight, .search-current');
+            highlights.forEach(highlight => {
+                const parent = highlight.parentNode;
+                parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+                parent.normalize();
+            });
+        }
+
+        function performSearch(searchTerm) {
+            if (!searchTerm) return;
+
+            clearSearchHighlights();
+            searchResults = [];
+
+            const text = editor.textContent;
+            const regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+            let match;
+            let offset = 0;
+
+            while ((match = regex.exec(text)) !== null) {
+                searchResults.push({
+                    index: match.index,
+                    length: match[0].length,
+                    text: match[0]
+                });
+            }
+
+            if (searchResults.length > 0) {
+                highlightSearchResults();
+                currentSearchIndex = 0;
+                highlightCurrentResult();
+                searchStatus.textContent = `Found ${searchResults.length} matches`;
+            } else {
+                searchStatus.textContent = 'No matches found';
+            }
+        }
+
+        function highlightSearchResults() {
+            let textNode;
+            const walker = document.createTreeWalker(
+                editor,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            const textNodes = [];
+            while (textNode = walker.nextNode()) {
+                textNodes.push(textNode);
+            }
+
+            let currentOffset = 0;
+            for (let node of textNodes) {
+                const nodeLength = node.textContent.length;
+                const nodeStart = currentOffset;
+                const nodeEnd = currentOffset + nodeLength;
+
+                for (let result of searchResults) {
+                    if (result.index >= nodeStart && result.index < nodeEnd) {
+                        const startInNode = result.index - nodeStart;
+                        const endInNode = Math.min(startInNode + result.length, nodeLength);
+
+                        if (startInNode >= 0 && endInNode > startInNode) {
+                            const beforeText = node.textContent.substring(0, startInNode);
+                            const matchText = node.textContent.substring(startInNode, endInNode);
+                            const afterText = node.textContent.substring(endInNode);
+
+                            const highlight = document.createElement('span');
+                            highlight.className = 'search-highlight';
+                            highlight.textContent = matchText;
+
+                            const parent = node.parentNode;
+                            const fragment = document.createDocumentFragment();
+
+                            if (beforeText) fragment.appendChild(document.createTextNode(beforeText));
+                            fragment.appendChild(highlight);
+                            if (afterText) fragment.appendChild(document.createTextNode(afterText));
+
+                            parent.replaceChild(fragment, node);
+                            break;
+                        }
+                    }
+                }
+
+                currentOffset += nodeLength;
+            }
+        }
+
+        function highlightCurrentResult() {
+            const highlights = editor.querySelectorAll('.search-highlight');
+            highlights.forEach((highlight, index) => {
+                if (index === currentSearchIndex) {
+                    highlight.className = 'search-current';
+                    highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    highlight.className = 'search-highlight';
+                }
+            });
+
+            if (searchResults.length > 0) {
+                searchStatus.textContent = `${currentSearchIndex + 1} of ${searchResults.length}`;
+            }
+        }
+
+        function findNext() {
+            const searchTerm = searchInput.value;
+            if (!searchTerm) return;
+
+            if (searchResults.length === 0) {
+                performSearch(searchTerm);
+            } else {
+                currentSearchIndex = (currentSearchIndex + 1) % searchResults.length;
+                highlightCurrentResult();
+            }
+        }
+
+        function findPrevious() {
+            const searchTerm = searchInput.value;
+            if (!searchTerm) return;
+
+            if (searchResults.length === 0) {
+                performSearch(searchTerm);
+            } else {
+                currentSearchIndex = currentSearchIndex === 0 ? searchResults.length - 1 : currentSearchIndex - 1;
+                highlightCurrentResult();
+            }
+        }
+
+        function replaceOne() {
+            const searchTerm = searchInput.value;
+            const replaceTerm = replaceInput.value;
+
+            if (!searchTerm || searchResults.length === 0) return;
+
+            const currentHighlight = editor.querySelector('.search-current');
+            if (currentHighlight) {
+                currentHighlight.textContent = replaceTerm;
+                currentHighlight.className = '';
+
+                handleInput();
+                performSearch(searchTerm);
+                showNotification('Replaced 1 occurrence', 'success');
+            }
+        }
+
+        function replaceAll() {
+            const searchTerm = searchInput.value;
+            const replaceTerm = replaceInput.value;
+
+            if (!searchTerm) return;
+
+            const count = searchResults.length;
+            if (count === 0) return;
+
+            const regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+            editor.innerHTML = editor.innerHTML.replace(regex, replaceTerm);
+
+            handleInput();
+            clearSearchHighlights();
+            searchResults = [];
+            searchStatus.textContent = `Replaced ${count} occurrences`;
+            showNotification(`Replaced ${count} occurrences`, 'success');
+        }
+
+        // Typing Indicators
+        function handleTypingStart() {
+            if (!isTyping && ws && ws.readyState === WebSocket.OPEN) {
+                isTyping = true;
+                ws.send(JSON.stringify({
+                    type: 'typing_start',
+                    userId: userId,
+                    userName: userName
+                }));
+            }
+
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                if (isTyping && ws && ws.readyState === WebSocket.OPEN) {
+                    isTyping = false;
+                    ws.send(JSON.stringify({
+                        type: 'typing_stop',
+                        userId: userId
+                    }));
+                }
+            }, 2000);
+        }
+
+        function updateTypingIndicator() {
+            if (typingUsers.size > 0) {
+                const names = Array.from(typingUsers);
+                let text = '';
+                if (names.length === 1) {
+                    text = `${names[0]} is typing...`;
+                } else if (names.length === 2) {
+                    text = `${names[0]} and ${names[1]} are typing...`;
+                } else {
+                    text = `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]} are typing...`;
+                }
+
+                typingIndicator.textContent = text;
+                typingIndicator.classList.add('active');
+            } else {
+                typingIndicator.classList.remove('active');
+            }
+        }
+
+        // Notification System
+        function showNotification(message, type = 'info') {
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+
+            // Play sound if enabled
+            if (soundsEnabled) {
+                playNotificationSound(type);
+            }
+        }
+
+        function playNotificationSound(type) {
+            // Create audio context for sound effects
+            if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+                const audioContext = new (AudioContext || webkitAudioContext)();
+
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                // Different sounds for different types
+                if (type === 'success') {
+                    oscillator.frequency.value = 800;
+                    gainNode.gain.value = 0.1;
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.2);
+                } else if (type === 'info') {
+                    oscillator.frequency.value = 600;
+                    gainNode.gain.value = 0.1;
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.15);
+                }
+            }
+        }
+
+        // Enhanced handleInput with typing indicators
+        const originalHandleInput = handleInput;
+        handleInput = function() {
+            handleTypingStart();
+            originalHandleInput();
+        };
+
+        // Enhanced chat input with typing for chat
+        chatInput.addEventListener('input', () => {
+            handleTypingStart();
+        });
+
+        // Search input handler
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value;
+            if (searchTerm) {
+                performSearch(searchTerm);
+            } else {
+                clearSearchHighlights();
+                searchStatus.textContent = '';
+            }
+        });
+
+        // Enhanced keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !isHtmlMode && !isSearchOpen) {
+                e.preventDefault();
+                selectAllText();
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                openSearch();
+            } else if (e.key === 'Escape' && isSearchOpen) {
+                closeSearch();
+            } else if (isSearchOpen && e.key === 'Enter') {
+                if (e.shiftKey) {
+                    findPrevious();
+                } else {
+                    findNext();
+                }
+            }
+        });
+
+        // Initialize new features after DOM is ready
+        setTimeout(initializeNewFeatures, 100);
+    </script>
+</body>
+</html>
