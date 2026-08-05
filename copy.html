@@ -790,6 +790,116 @@
         .notification.info {
             background: #17a2b8;
         }
+
+        /* Sin esto, los display:flex de abajo ganan al atributo hidden y el
+           QR y el aviso de soltar archivos se ven siempre. */
+        [hidden] { display: none !important; }
+
+        /* ---- Notas, archivos y QR ---- */
+        .barra-docs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .barra-docs-titulo { font-size: 13px; color: #666; font-weight: 600; }
+        .docs-lista { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+        .doc-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            border: 1px solid #dee2e6;
+            background: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .doc-chip:hover { border-color: #007bff; }
+        .doc-chip.activo { background: #007bff; border-color: #007bff; color: #fff; }
+        .doc-chip .gente { font-size: 11px; opacity: .75; }
+        .doc-chip .borrar {
+            border: 0; background: none; color: inherit;
+            cursor: pointer; font-size: 14px; line-height: 1; opacity: .6; padding: 0;
+        }
+        .doc-chip .borrar:hover { opacity: 1; }
+
+        .zona-archivos { padding: 12px 20px; border-bottom: 1px solid #e9ecef; }
+        .archivos-cabecera {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 10px; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: #555;
+        }
+        .archivos-lista { display: flex; flex-wrap: wrap; gap: 8px; }
+        .archivos-vacio { margin: 0; font-size: 12px; color: #888; font-weight: 400; }
+        .archivo-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 8px;
+            background: #fff; font-size: 13px; max-width: 320px;
+        }
+        .archivo-item .nombre {
+            font-weight: 600; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; max-width: 170px;
+        }
+        .archivo-item .peso { color: #888; font-size: 11px; }
+        .archivo-item a { color: #007bff; text-decoration: none; font-weight: 600; }
+        .archivo-item .subiendo { color: #f39c12; font-size: 11px; }
+
+        .capa-qr {
+            position: fixed; inset: 0; z-index: 2000;
+            background: rgba(0,0,0,.6);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .caja-qr {
+            background: #fff; padding: 24px; border-radius: 14px;
+            text-align: center; max-width: 90vw;
+        }
+        .caja-qr h3 { margin: 0 0 14px; }
+        .caja-qr img { display: block; margin: 0 auto 12px; }
+        .url-qr {
+            font-family: monospace; font-size: 12px; color: #555;
+            word-break: break-all; margin: 0 0 14px;
+        }
+
+        /* Aparece al arrastrar un archivo sobre la ventana. */
+        .soltar-aqui {
+            position: fixed; inset: 0; z-index: 3000;
+            background: rgba(0,123,255,.15);
+            border: 4px dashed #007bff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 26px; font-weight: 700; color: #0056b3;
+            pointer-events: none;
+        }
+
+        body.dark-mode .barra-docs,
+        body.dark-mode .zona-archivos { background: #2d3748; border-color: #4a5568; }
+        body.dark-mode .doc-chip,
+        body.dark-mode .archivo-item { background: #1a202c; border-color: #4a5568; color: #e2e8f0; }
+        body.dark-mode .doc-chip.activo { background: #007bff; }
+        body.dark-mode .caja-qr { background: #1a202c; color: #e2e8f0; }
+
+        .chat-destino-fila {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 10px 0; font-size: 12px; color: #666;
+        }
+        .chat-destino-fila select {
+            flex: 1; padding: 4px 6px; font-size: 12px;
+            border: 1px solid #dee2e6; border-radius: 6px; background: #fff;
+        }
+        .chat-destino-fila .btn { padding: 4px 8px; font-size: 13px; }
+        body.dark-mode .chat-destino-fila select { background: #1a202c; color: #e2e8f0; border-color: #4a5568; }
+
+        .chat-archivo {
+            display: inline-flex; align-items: center; gap: 6px;
+            margin-top: 4px; padding: 6px 10px;
+            background: rgba(0,123,255,.08); border: 1px solid rgba(0,123,255,.25);
+            border-radius: 8px; font-size: 12px;
+        }
+        .chat-archivo a { color: #007bff; font-weight: 600; text-decoration: none; }
+        .chat-privado { font-size: 11px; color: #9b59b6; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -808,7 +918,42 @@
                 <div class="users-panel" id="usersPanel"></div>
             </div>
         </div>
-        
+
+        <div class="barra-docs">
+            <span class="barra-docs-titulo">📄 Notas:</span>
+            <div class="docs-lista" id="docsLista"></div>
+            <button class="btn" onclick="crearDocumento()" title="Nueva nota">+ Nueva</button>
+            <button class="btn" onclick="abrirQR()" title="Abrir en el móvil">📱 QR</button>
+        </div>
+
+        <div class="zona-archivos" id="zonaArchivos">
+            <div class="archivos-cabecera">
+                <span>📎 Archivos compartidos</span>
+                <div>
+                    <button class="btn" onclick="elegirArchivos()">Subir archivo</button>
+                    <button class="btn secondary" onclick="toggleArchivos()" id="archivosToggle">Ocultar</button>
+                </div>
+            </div>
+            <div class="archivos-lista" id="archivosLista">
+                <p class="archivos-vacio">Arrastra aquí cualquier archivo, o pégalo con Ctrl+V. Aparecerá al instante en los demás dispositivos.</p>
+            </div>
+            <input type="file" id="archivoInput" multiple hidden>
+        </div>
+
+        <div class="capa-qr" id="capaQR" hidden onclick="cerrarQR()">
+            <div class="caja-qr" onclick="event.stopPropagation()">
+                <h3>Abrir en el móvil</h3>
+                <img id="imagenQR" alt="Código QR de esta página" width="260" height="260">
+                <p class="url-qr" id="urlQR"></p>
+                <button class="btn" onclick="copiarEnlace()">Copiar enlace</button>
+                <button class="btn secondary" onclick="cerrarQR()">Cerrar</button>
+            </div>
+        </div>
+
+        <div class="soltar-aqui" id="soltarAqui" hidden>
+            <div>📥 Suelta para compartir con todos</div>
+        </div>
+
         <div class="toolbar">
             <div class="format-controls">
                 <button class="btn" onclick="formatText('bold')" title="Bold" id="boldBtn">B</button>
@@ -867,6 +1012,11 @@
         </div>
         <div class="chat-messages" id="chatMessages">
             <div class="typing-indicator" id="typingIndicator"></div>
+        </div>
+        <div class="chat-destino-fila">
+            <label for="chatDestino">Enviar a:</label>
+            <select id="chatDestino"><option value="todos">Todos</option></select>
+            <button class="btn" onclick="elegirArchivos()" title="Compartir un archivo">📎</button>
         </div>
         <div class="chat-input-container">
             <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." onkeypress="handleChatKeyPress(event)">
@@ -964,7 +1114,11 @@
 
         function initializeApp() {
             console.log('Connecting to server...');
-            ws = new WebSocket('ws://' + window.location.host);
+            // wss si la página va por https, y el documento en el que estamos.
+            const protocolo = location.protocol === 'https:' ? 'wss://' : 'ws://';
+            const doc = new URLSearchParams(location.search).get('doc') || 'general';
+            documentoActual = doc;
+            ws = new WebSocket(protocolo + location.host + '/?doc=' + encodeURIComponent(doc));
 
             ws.onopen = () => {
                 console.log('Connected to WebSocket server.');
@@ -1354,7 +1508,24 @@ ${content}
             return name.charAt(0).toUpperCase();
         }
 
+        function actualizarDestinatarios() {
+            const sel = document.getElementById('chatDestino');
+            if (!sel) return;
+            const elegido = sel.value;
+            sel.innerHTML = '<option value="todos">Todos</option>';
+            connectedUsers.forEach((user, id) => {
+                if (id === userId) return; // uno mismo no es destinatario
+                const op = document.createElement('option');
+                op.value = id;
+                op.textContent = user.name;
+                sel.appendChild(op);
+            });
+            // Si la persona elegida sigue conectada, se mantiene.
+            sel.value = [...sel.options].some(o => o.value === elegido) ? elegido : 'todos';
+        }
+
         function updateUsersPanel() {
+            actualizarDestinatarios();
             usersPanel.innerHTML = '';
             connectedUsers.forEach((user, id) => {
                 const userDiv = document.createElement('div');
@@ -1425,6 +1596,7 @@ ${content}
                 userId: userId,
                 userName: userName,
                 message: message,
+                para: destinatarioActual(),
                 timestamp: Date.now()
             }));
 
@@ -1444,12 +1616,50 @@ ${content}
             if (data.type === 'system') {
                 messageDiv.textContent = data.message;
             } else {
-                const time = new Date(data.timestamp).toLocaleTimeString('en-US', {
+                const time = new Date(data.timestamp).toLocaleTimeString('es-ES', {
                     hour12: false,
                     hour: '2-digit',
                     minute: '2-digit'
                 });
-                messageDiv.innerHTML = `<strong>${data.userName}</strong> <small>(${time})</small><br>${data.message}`;
+
+                const quien = document.createElement('strong');
+                quien.textContent = data.userName;
+                const cuando = document.createElement('small');
+                cuando.textContent = ` (${time})`;
+                messageDiv.append(quien, cuando);
+
+                if (data.privado) {
+                    const marca = document.createElement('span');
+                    marca.className = 'chat-privado';
+                    marca.textContent = data.paraNombre
+                        ? ` → solo para ${data.paraNombre}`
+                        : ' → solo para ti';
+                    messageDiv.appendChild(marca);
+                }
+
+                // textContent y no innerHTML: si no, cualquiera puede colar
+                // etiquetas HTML en el chat de los demás.
+                if (data.message) {
+                    const cuerpo = document.createElement('div');
+                    cuerpo.textContent = data.message;
+                    messageDiv.appendChild(cuerpo);
+                }
+
+                if (data.archivo) {
+                    const caja = document.createElement('div');
+                    caja.className = 'chat-archivo';
+                    const icono = document.createElement('span');
+                    icono.textContent = iconoDe(data.archivo.tipo, data.archivo.nombre);
+                    const nombre = document.createElement('span');
+                    nombre.textContent =
+                        `${data.archivo.nombre} (${pesoLegible(data.archivo.tamano)})`;
+                    const enlace = document.createElement('a');
+                    enlace.href = '/api/archivos/' + data.archivo.id;
+                    enlace.download = data.archivo.nombre;
+                    enlace.textContent = 'Descargar';
+                    caja.append(icono, nombre, enlace);
+                    messageDiv.appendChild(caja);
+                }
             }
 
             chatMessages.appendChild(messageDiv);
@@ -1852,6 +2062,297 @@ ${content}
 
         // Initialize new features after DOM is ready
         setTimeout(initializeNewFeatures, 100);
+
+        // =====================================================================
+        //  Notas separadas, archivos compartidos y código QR
+        // =====================================================================
+
+        // var y no let: initializeApp() se ejecuta más arriba en este mismo
+        // script y ya necesita esta variable.
+        var documentoActual = 'general';
+        var archivosCompartidos = [];
+
+        function pesoLegible(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        }
+
+        function iconoDe(tipo, nombre) {
+            if (/^image\//.test(tipo)) return '🖼️';
+            if (/^video\//.test(tipo)) return '🎬';
+            if (/^audio\//.test(tipo)) return '🎵';
+            if (/pdf/.test(tipo)) return '📕';
+            if (/zip|compressed|tar|rar/.test(tipo)) return '🗜️';
+            if (/\.(js|py|sh|json|ya?ml|html|css|ts)$/i.test(nombre || '')) return '📜';
+            return '📄';
+        }
+
+        // ---- Notas -----------------------------------------------------------
+
+        function pintarDocumentos(documentos) {
+            const cont = document.getElementById('docsLista');
+            if (!cont || !Array.isArray(documentos)) return;
+            cont.innerHTML = '';
+            documentos.forEach(doc => {
+                const chip = document.createElement('span');
+                chip.className = 'doc-chip' + (doc.nombre === documentoActual ? ' activo' : '');
+                chip.onclick = () => cambiarDocumento(doc.nombre);
+
+                const nombre = document.createElement('span');
+                nombre.textContent = doc.nombre;
+                chip.appendChild(nombre);
+
+                if (doc.conectados > 0) {
+                    const gente = document.createElement('span');
+                    gente.className = 'gente';
+                    gente.textContent = '· ' + doc.conectados;
+                    gente.title = doc.conectados + ' persona(s) aquí';
+                    chip.appendChild(gente);
+                }
+
+                // La nota principal no se puede borrar: es la que queda siempre.
+                if (doc.nombre !== 'general') {
+                    const x = document.createElement('button');
+                    x.className = 'borrar';
+                    x.textContent = '✕';
+                    x.title = 'Borrar esta nota';
+                    x.onclick = (e) => {
+                        e.stopPropagation();
+                        if (confirm(`¿Borrar la nota "${doc.nombre}"? No se puede deshacer.`)) {
+                            ws.send(JSON.stringify({ type: 'borrar_documento', documento: doc.nombre }));
+                        }
+                    };
+                    chip.appendChild(x);
+                }
+                cont.appendChild(chip);
+            });
+        }
+
+        function cambiarDocumento(nombre) {
+            if (nombre === documentoActual) return;
+            documentoActual = nombre;
+            ws.send(JSON.stringify({ type: 'cambiar_documento', documento: nombre }));
+            // La dirección refleja la nota abierta, para poder compartirla tal cual.
+            history.replaceState(null, '', '?doc=' + encodeURIComponent(nombre));
+            showToast('Nota: ' + nombre);
+        }
+
+        function crearDocumento() {
+            const nombre = prompt('Nombre de la nueva nota:');
+            if (!nombre) return;
+            ws.send(JSON.stringify({ type: 'cambiar_documento', documento: nombre }));
+            showToast('Creando nota...');
+        }
+
+        // ---- Archivos --------------------------------------------------------
+
+        function pintarArchivos() {
+            const cont = document.getElementById('archivosLista');
+            if (!cont) return;
+            if (!archivosCompartidos.length) {
+                cont.innerHTML = '<p class="archivos-vacio">Arrastra aquí cualquier archivo, o pégalo con Ctrl+V. Aparecerá al instante en los demás dispositivos.</p>';
+                return;
+            }
+            cont.innerHTML = '';
+            // Los últimos primero: lo que acabas de compartir es lo que buscas.
+            archivosCompartidos.slice().reverse().forEach(a => {
+                const item = document.createElement('div');
+                item.className = 'archivo-item';
+                item.innerHTML = `
+                    <span>${iconoDe(a.tipo, a.nombre)}</span>
+                    <span class="nombre" title="${a.nombre}">${a.nombre}</span>
+                    <span class="peso">${pesoLegible(a.tamano)}</span>`;
+                if (a.subiendo) {
+                    const estado = document.createElement('span');
+                    estado.className = 'subiendo';
+                    estado.textContent = 'subiendo…';
+                    item.appendChild(estado);
+                } else {
+                    const enlace = document.createElement('a');
+                    enlace.href = '/api/archivos/' + a.id;
+                    enlace.textContent = 'Descargar';
+                    enlace.download = a.nombre;
+                    item.appendChild(enlace);
+                }
+                cont.appendChild(item);
+            });
+        }
+
+        function anadirArchivo(info) {
+            if (!archivosCompartidos.some(a => a.id === info.id)) {
+                archivosCompartidos.push(info);
+                pintarArchivos();
+            }
+        }
+
+        async function subirArchivo(file) {
+            const provisional = {
+                id: 'temp-' + Math.random().toString(36).slice(2),
+                nombre: file.name || 'archivo',
+                tipo: file.type || 'application/octet-stream',
+                tamano: file.size,
+                subiendo: true
+            };
+            archivosCompartidos.push(provisional);
+            pintarArchivos();
+
+            try {
+                const res = await fetch('/api/archivos', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': provisional.tipo,
+                        'x-nombre-archivo': encodeURIComponent(provisional.nombre)
+                    },
+                    body: file
+                });
+                const info = await res.json();
+                if (!res.ok || !info.ok) throw new Error(info.error || 'Fallo al subir');
+
+                const i = archivosCompartidos.indexOf(provisional);
+                if (i >= 0) archivosCompartidos.splice(i, 1);
+                anadirArchivo(info);
+
+                // Se avisa por el chat para que aparezca al momento en el resto
+                // de dispositivos, con su enlace de descarga.
+                ws.send(JSON.stringify({
+                    type: 'chat',
+                    message: '',
+                    archivo: info,
+                    para: destinatarioActual()
+                }));
+                showToast('Compartido: ' + info.nombre);
+            } catch (err) {
+                const i = archivosCompartidos.indexOf(provisional);
+                if (i >= 0) archivosCompartidos.splice(i, 1);
+                pintarArchivos();
+                showNotification('No se pudo compartir ' + provisional.nombre, 'error');
+            }
+        }
+
+        function destinatarioActual() {
+            const sel = document.getElementById('chatDestino');
+            return sel ? sel.value : 'todos';
+        }
+
+        function elegirArchivos() {
+            document.getElementById('archivoInput').click();
+        }
+
+        function toggleArchivos() {
+            const lista = document.getElementById('archivosLista');
+            const boton = document.getElementById('archivosToggle');
+            const oculta = lista.style.display === 'none';
+            lista.style.display = oculta ? 'flex' : 'none';
+            boton.textContent = oculta ? 'Ocultar' : 'Mostrar';
+        }
+
+        // ---- Código QR -------------------------------------------------------
+
+        function abrirQR() {
+            // Se manda la dirección con la que hemos entrado nosotros: si es un
+            // dominio público, el código lleva a ese dominio y no a una IP
+            // interna que desde el móvil no resolvería.
+            const url = location.origin + '/?doc=' + encodeURIComponent(documentoActual);
+            document.getElementById('imagenQR').src =
+                '/api/qr?url=' + encodeURIComponent(url) + '&t=' + Date.now();
+            document.getElementById('urlQR').textContent = url;
+            document.getElementById('capaQR').hidden = false;
+        }
+
+        function cerrarQR() {
+            document.getElementById('capaQR').hidden = true;
+        }
+
+        function copiarEnlace() {
+            const url = document.getElementById('urlQR').textContent;
+            navigator.clipboard.writeText(url)
+                .then(() => showToast('Enlace copiado'))
+                .catch(() => showNotification('No se pudo copiar', 'error'));
+        }
+
+        // ---- Enganches con lo que ya existía ---------------------------------
+
+        (function activarNovedades() {
+            // Arrastrar sobre cualquier punto de la ventana comparte el archivo.
+            const aviso = document.getElementById('soltarAqui');
+            let dentro = 0;
+
+            window.addEventListener('dragenter', e => {
+                if (!e.dataTransfer || !e.dataTransfer.types.includes('Files')) return;
+                dentro++;
+                aviso.hidden = false;
+            });
+            window.addEventListener('dragover', e => e.preventDefault());
+            window.addEventListener('dragleave', () => {
+                if (--dentro <= 0) { dentro = 0; aviso.hidden = true; }
+            });
+            window.addEventListener('drop', e => {
+                if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+                e.preventDefault();
+                dentro = 0;
+                aviso.hidden = true;
+                [...e.dataTransfer.files].forEach(subirArchivo);
+            });
+
+            document.getElementById('archivoInput').addEventListener('change', e => {
+                [...e.target.files].forEach(subirArchivo);
+                e.target.value = '';
+            });
+
+            // Pegar una imagen la sube como archivo en vez de incrustarla en el
+            // documento: antes cada foto viajaba entera a todos en cada tecla.
+            document.addEventListener('paste', e => {
+                const items = [...(e.clipboardData?.items || [])];
+                const ficheros = items
+                    .filter(i => i.kind === 'file')
+                    .map(i => i.getAsFile())
+                    .filter(Boolean);
+                if (!ficheros.length) return;
+                e.preventDefault();
+                e.stopPropagation();
+                ficheros.forEach(subirArchivo);
+            }, true);
+
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') cerrarQR();
+            });
+        })();
+
+        // Los mensajes nuevos se atienden aquí sin tocar el resto del código.
+        (function ampliarMensajes() {
+            const esperar = setInterval(() => {
+                if (typeof ws === 'undefined' || !ws || !ws.onmessage) return;
+                clearInterval(esperar);
+                const anterior = ws.onmessage;
+                ws.onmessage = (evento) => {
+                    let m;
+                    try { m = JSON.parse(evento.data); } catch { return; }
+
+                    if (m.type === 'documentos') {
+                        if (m.documentos) pintarDocumentos(m.documentos);
+                        return;
+                    }
+                    if (m.type === 'bienvenida') {
+                        documentoActual = m.documento || documentoActual;
+                        return;
+                    }
+                    if (m.type === 'load' && m.documento) {
+                        documentoActual = m.documento;
+                        fetch('/api/documentos')
+                            .then(r => r.json())
+                            .then(pintarDocumentos)
+                            .catch(() => {});
+                    }
+                    if (m.type === 'chat' && m.archivo) {
+                        anadirArchivo(m.archivo);
+                    }
+                    anterior(evento);
+                };
+            }, 200);
+        })();
+
+        fetch('/api/documentos').then(r => r.json()).then(pintarDocumentos).catch(() => {});
     </script>
 </body>
 </html>

@@ -5,3 +5,4 @@ node_modules/
 .DS_Store
 # El documento compartido es contenido de los usuarios, no del proyecto.
 collaborative-document.html
+data/
