@@ -1,9 +1,11 @@
-# Se construye desde este mismo código, así que para actualizar basta con
-# hacer git pull aquí y reconstruir.
+# Compose del servidor: usa la imagen que GitHub publica al fusionar a main,
+# de modo que actualizar es pulsar Update en Dockge.
+#
+# Para desarrollar en local, usa docker-compose.dev.yml, que construye desde
+# este mismo código sin publicar nada.
 services:
   copypaste-app:
-    build: .
-    image: copypaste-locally:latest
+    image: ghcr.io/cfpandrade/copypaste-locally:latest
     container_name: copypaste-locally
     restart: unless-stopped
     ports:

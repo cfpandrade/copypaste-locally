@@ -24,6 +24,46 @@ npm start
 
 Queda en `http://localhost:3000`. Se puede cambiar con la variable `PORT`.
 
+## Cómo se trabaja y se publica
+
+En `dev` se toca y se prueba; en `main` se publica. La imagen solo se construye
+al fusionar, así que nada llega al servidor hasta que tú lo decides.
+
+```
+dev  ──► pruebas en tu ordenador, sin publicar nada
+ │
+ └─ merge ──► main ──► GitHub construye y publica la imagen
+                            │
+                            └─► Dockge: botón Update
+```
+
+**Probar un cambio en local:**
+
+```bash
+git switch dev
+# ...editar...
+docker compose -f docker-compose.dev.yml up -d --build   # http://localhost:4000
+```
+
+O sin Docker, que es más rápido para ir probando:
+
+```bash
+npm install && npm start
+```
+
+**Publicar lo que te convenza:**
+
+```bash
+git switch main && git merge dev && git push
+```
+
+Eso dispara la acción de GitHub, que construye la imagen y la deja en
+`ghcr.io/cfpandrade/copypaste-locally:latest`. Cuando termine, en Dockge pulsas
+**Update** en el stack y el servidor se queda con la versión nueva.
+
+Cada publicación deja también una etiqueta con el identificador del commit, por
+si hace falta volver a una versión anterior.
+
 ## Con Docker
 
 ```bash

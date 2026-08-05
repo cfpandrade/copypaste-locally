@@ -1,0 +1,24 @@
+# Para probar en tu ordenador antes de fusionar a main. Construye desde el
+# código de aquí y no publica ninguna imagen.
+#
+#   docker compose -f docker-compose.dev.yml up -d --build
+#
+# Queda en http://localhost:4000
+services:
+  copypaste-app:
+    build: .
+    image: copypaste-locally:dev
+    container_name: copypaste-dev
+    restart: unless-stopped
+    ports:
+      - 4000:3000
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATA_DIR=/datos
+    volumes:
+      # Datos de prueba aparte de los del servidor.
+      - copypaste_datos_dev:/datos
+
+volumes:
+  copypaste_datos_dev:
