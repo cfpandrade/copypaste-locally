@@ -1,11 +1,10 @@
 # Use Node.js LTS version
-FROM node:18-alpine
+FROM node:22-alpine
 
-# Metadata for version 2.0
-LABEL version="2.0.0"
+LABEL version="3.0.0"
 LABEL description="Collaborative copy/paste app with enhanced features"
 LABEL maintainer="Carlos Andrade <carlos@perezandrade.com>"
-LABEL features="dark-mode,search-replace,typing-indicators,chat,mobile-responsive,drag-drop,notifications,sounds"
+LABEL features="notas-separadas,archivos,qr,chat,dark-mode,search-replace"
 
 # Set working directory
 WORKDIR /app
@@ -23,9 +22,12 @@ COPY . .
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 
-# Change ownership of the app directory
-RUN chown -R nodejs:nodejs /app
+# Las notas y los archivos compartidos viven aquí, fuera del código, para que
+# se puedan conservar en un volumen sin tapar la aplicación.
+ENV DATA_DIR=/datos
+RUN mkdir -p /datos && chown -R nodejs:nodejs /app /datos
 USER nodejs
+VOLUME ["/datos"]
 
 # Expose port 3000
 EXPOSE 3000

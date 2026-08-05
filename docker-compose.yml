@@ -1,26 +1,28 @@
-version: '3.8'
-
+# Se construye desde este mismo código, así que para actualizar basta con
+# hacer git pull aquí y reconstruir.
 services:
   copypaste-app:
-    image: cfpandrade/copypaste_locally:latest
+    build: .
+    image: copypaste-locally:latest
     container_name: copypaste-locally
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    volumes:
-      - copypaste_data:/app
+      # La aplicación escucha en el 3000; el 4000 es el puerto del servidor.
+      - 4000:3000
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - DATA_DIR=/datos
+    volumes:
+      # Solo los datos. Montar aquí /app taparía el código de la imagen, que es
+      # justo lo que impedía que las mejoras llegaran al contenedor.
+      - copypaste_datos:/datos
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
-    labels:
-      - "app.version=latest"
-      - "app.features=dark-mode,search-replace,typing-indicators,chat,mobile-responsive,drag-drop,notifications,sounds"
+      start_period: 20s
 
 volumes:
-  copypaste_data:
+  copypaste_datos:
