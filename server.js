@@ -8,6 +8,8 @@ const fsp = require('fs/promises');
 const path = require('path');
 
 const PUERTO = process.env.PORT || 3000;
+// La versión publicada, para verla en la página y saber si ya llegó una actualización.
+const VERSION = require('./package.json').version;
 const DATOS = process.env.DATA_DIR || path.join(__dirname, 'data');
 const CARPETA_DOCS = path.join(DATOS, 'documentos');
 const CARPETA_ARCHIVOS = path.join(DATOS, 'archivos');
@@ -244,6 +246,8 @@ app.get('/api/archivos/:id', (req, res) => {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'copy.html')));
 
 app.get('/api/documentos', async (req, res) => res.json(await listaDocs()));
+
+app.get('/api/version', (req, res) => res.json({ version: VERSION }));
 
 // Para instalarla en el móvil como una app más (pantalla de inicio, sin barra del navegador).
 app.get('/manifest.webmanifest', (req, res) =>

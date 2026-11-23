@@ -77,7 +77,7 @@ protegidas, y la imagen solo se construye desde `main` (nunca desde una PR).
 Cada imagen lleva su procedencia firmada por GitHub; para comprobarla:
 
 ```bash
-gh attestation verify oci://ghcr.io/cfpandrade/copypaste-locally:3.1.1 --owner cfpandrade
+gh attestation verify oci://ghcr.io/cfpandrade/copypaste-locally:3.1.2 --owner cfpandrade
 ```
 
 ## Con Docker
