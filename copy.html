@@ -911,7 +911,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📋 CopyPaste</h1>
+            <h1>📋 CopyPaste <small id="versionApp" style="font-size: 0.45em; font-weight: normal; opacity: 0.75;"></small></h1>
             <p>Lo que escribes o pegas aquí aparece al momento en los demás dispositivos de casa</p>
         </div>
         
@@ -1007,7 +1007,7 @@
         
         <div class="footer">
             Document is automatically saved and synced in real-time. Content persists until someone clicks "Clear All".<br>
-            <small style="opacity: 0.7; margin-top: 8px; display: block;">Created by Carlos Andrade • carlos@perezandrade.com</small>
+            <small style="opacity: 0.7; margin-top: 8px; display: block;">Hecho por Carlos Andrade • carlos@perezandrade.com</small>
         </div>
     </div>
 
@@ -1480,6 +1480,12 @@ ${content}
                 showToast('Pegado con formato');
             }, 10);
         }
+
+        // la versión del servidor, a la vista: así se sabe si ya llegó una actualización
+        fetch('/api/version').then((r) => r.json()).then((d) => {
+            const el = document.getElementById('versionApp');
+            if (el && d.version) el.textContent = 'v' + d.version;
+        }).catch(() => {});
 
         // ── pegar y el historial de lo copiado (23/11/2026) ──
         async function pegarPortapapeles() {

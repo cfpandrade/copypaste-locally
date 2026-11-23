@@ -6,7 +6,7 @@
 
 name: Publicar imagen
 
-# Nunca en pull_request: el repositorio es público y el código de un fork no debe llegar a construir ni a publicar.
+# Nunca en pull_request ni a mano: el repositorio es público y solo se construye lo que llega a main.
 on:
   push:
     branches: [main]
@@ -15,7 +15,6 @@ on:
     paths-ignore:
       - '**.md'
       - '.gitignore'
-  workflow_dispatch: {}
 
 env:
   IMAGEN: ghcr.io/${{ github.repository_owner }}/copypaste-locally
