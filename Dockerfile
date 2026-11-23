@@ -1,7 +1,7 @@
 # Use Node.js LTS version
 FROM node:22-alpine
 
-LABEL version="3.1.2"
+LABEL version="3.1.3"
 LABEL description="Collaborative copy/paste app with enhanced features"
 LABEL maintainer="Carlos Andrade <carlos@perezandrade.com>"
 LABEL features="notas-separadas,archivos,qr,chat,dark-mode,search-replace,caducidad,redes-permitidas,app-movil"
