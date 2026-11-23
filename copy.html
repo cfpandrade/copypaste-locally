@@ -1,9 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Collaborative Rich Text Notes</title>
+    <title>CopyPaste</title>
+    <meta name="theme-color" content="#1e293b">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" type="image/png" href="/icono-192.png">
+    <link rel="apple-touch-icon" href="/icono-180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="CopyPaste">
     <style>
         * {
             margin: 0;
@@ -905,14 +911,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🌐 Collaborative Rich Text Notes</h1>
-            <p>Real-time collaborative editing - changes sync across all devices instantly</p>
+            <h1>📋 CopyPaste</h1>
+            <p>Lo que escribes o pegas aquí aparece al momento en los demás dispositivos de casa</p>
         </div>
         
         <div class="status-bar">
             <div class="status-indicator">
                 <div class="status-dot" id="statusDot"></div>
-                <span id="statusText">Connecting...</span>
+                <span id="statusText">Conectando…</span>
             </div>
             <div class="active-users">
                 <div class="users-panel" id="usersPanel"></div>
@@ -956,35 +962,36 @@
 
         <div class="toolbar">
             <div class="format-controls">
-                <button class="btn" onclick="formatText('bold')" title="Bold" id="boldBtn">B</button>
-                <button class="btn" onclick="formatText('italic')" title="Italic" id="italicBtn">I</button>
-                <button class="btn" onclick="formatText('underline')" title="Underline" id="underlineBtn">U</button>
-                <button class="btn" onclick="formatText('removeFormat')" title="Clear Formatting" id="clearFormatBtn">Clear</button>
+                <button class="btn" onclick="formatText('bold')" title="Negrita" id="boldBtn">B</button>
+                <button class="btn" onclick="formatText('italic')" title="Cursiva" id="italicBtn">I</button>
+                <button class="btn" onclick="formatText('underline')" title="Subrayado" id="underlineBtn">U</button>
+                <button class="btn" onclick="formatText('removeFormat')" title="Quitar formato" id="clearFormatBtn">Sin formato</button>
             </div>
             
-            <button class="btn mode-toggle" onclick="toggleMode()" id="modeBtn">HTML Mode</button>
-            <button class="btn" onclick="toggleDarkMode()" id="darkModeBtn">🌙 Dark Mode</button>
-            <button class="btn" onclick="changeUserName()" id="nameBtn">👤 Change Name</button>
-            <button class="btn" onclick="toggleSounds()" id="soundBtn">🔊 Sounds</button>
-            <button class="btn" onclick="selectAllText()" id="selectBtn">Select All</button>
-            <button class="btn secondary" onclick="copyText()" id="copyBtn">Copy All</button>
-            <button class="btn danger" onclick="clearText()" id="clearBtn">Clear All</button>
-            <button class="btn success" onclick="downloadText()" id="downloadBtn">Download HTML</button>
-            <button class="btn warning" onclick="downloadPlainText()" id="downloadTextBtn">Download Text</button>
+            <button class="btn mode-toggle" onclick="toggleMode()" id="modeBtn">Modo HTML</button>
+            <button class="btn" onclick="toggleDarkMode()" id="darkModeBtn">🌙 Oscuro</button>
+            <button class="btn" onclick="changeUserName()" id="nameBtn">👤 Mi nombre</button>
+            <button class="btn" onclick="toggleSounds()" id="soundBtn">🔊 Sonidos</button>
+            <button class="btn" onclick="selectAllText()" id="selectBtn">Seleccionar todo</button>
+            <button class="btn secondary" onclick="copyText()" id="copyBtn">Copiar todo</button>
+            <button class="btn secondary" onclick="pegarPortapapeles()" id="pasteBtn" title="Pegar lo que tienes copiado en este dispositivo">📋 Pegar</button>
+            <button class="btn" onclick="verHistorial()" id="historialBtn" title="Lo último que has copiado desde este dispositivo">🕘 Historial</button>
+            <button class="btn danger" onclick="clearText()" id="clearBtn">Borrar todo</button>
+            <button class="btn success" onclick="downloadText()" id="downloadBtn">Descargar HTML</button>
+            <button class="btn warning" onclick="downloadPlainText()" id="downloadTextBtn">Descargar texto</button>
             
             <div class="word-count">
-                <span id="charCount">0</span> chars | <span id="wordCount">0</span> words | <span id="htmlCount">0</span> HTML chars
+                <span id="charCount">0</span> caracteres | <span id="wordCount">0</span> palabras | <span id="htmlCount">0</span> de HTML
             </div>
         </div>
         
         <div class="editor-container">
             <div class="loading-overlay" id="loadingOverlay">
-                🔄 Loading shared document...
+                🔄 Cargando la nota compartida…
             </div>
             <div class="placeholder" id="placeholder">
-                This is a shared document! Changes are synced across all browsers in real-time.<br>
-                Paste your formatted content here and it will be instantly available to everyone.<br>
-                Colors, fonts, bold, italic, headings, lists, and more will be preserved.
+                Escribe o pega aquí: aparece al momento en el resto de dispositivos de casa.<br>
+                Se conservan colores, negritas, títulos y listas.
             </div>
             <div
                 class="editor"
@@ -994,7 +1001,7 @@
                 onpaste="handlePaste(event)"
             ></div>
             <div class="drag-overlay" id="dragOverlay">
-                📁 Drop files here to upload
+                📁 Suelta aquí los archivos para compartirlos
             </div>
         </div>
         
@@ -1019,27 +1026,27 @@
             <button class="btn" onclick="elegirArchivos()" title="Compartir un archivo">📎</button>
         </div>
         <div class="chat-input-container">
-            <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." onkeypress="handleChatKeyPress(event)">
-            <button class="chat-send" onclick="sendChatMessage()">Send</button>
+            <input type="text" class="chat-input" id="chatInput" placeholder="Escribe un mensaje…" onkeypress="handleChatKeyPress(event)">
+            <button class="chat-send" onclick="sendChatMessage()">Enviar</button>
         </div>
     </div>
 
     <!-- Search Modal -->
     <div class="search-modal" id="searchModal">
         <div class="search-row">
-            <label>Find:</label>
-            <input type="text" class="search-input" id="searchInput" placeholder="Enter text to search...">
+            <label>Buscar:</label>
+            <input type="text" class="search-input" id="searchInput" placeholder="Texto a buscar…">
         </div>
         <div class="search-row">
-            <label>Replace:</label>
-            <input type="text" class="search-input" id="replaceInput" placeholder="Enter replacement text...">
+            <label>Reemplazar:</label>
+            <input type="text" class="search-input" id="replaceInput" placeholder="Reemplazar por…">
         </div>
         <div class="search-buttons">
-            <button class="search-btn" onclick="findNext()">Find Next</button>
-            <button class="search-btn" onclick="findPrevious()">Find Previous</button>
-            <button class="search-btn" onclick="replaceOne()">Replace</button>
-            <button class="search-btn" onclick="replaceAll()">Replace All</button>
-            <button class="search-btn secondary" onclick="closeSearch()">Close</button>
+            <button class="search-btn" onclick="findNext()">Siguiente</button>
+            <button class="search-btn" onclick="findPrevious()">Anterior</button>
+            <button class="search-btn" onclick="replaceOne()">Reemplazar</button>
+            <button class="search-btn" onclick="replaceAll()">Reemplazar todas</button>
+            <button class="search-btn secondary" onclick="closeSearch()">Cerrar</button>
         </div>
         <div id="searchStatus" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
     </div>
@@ -1125,7 +1132,7 @@
                 setConnectionStatus(true);
                 showLoading(false);
                 editor.focus();
-                showToast('Connected! Share this page URL to collaborate.');
+                showToast('Conectado');
 
                 // Send user info to server
                 ws.send(JSON.stringify({
@@ -1145,7 +1152,7 @@
                     togglePlaceholder();
                     setTimeout(() => isUpdatingFromRemote = false, 50);
                 } else if (message.type === 'user_count') {
-                    activeUsers.textContent = `Users online: ${message.count}`;
+                    activeUsers.textContent = `Conectados: ${message.count}`;
                 } else if (message.type === 'chat') {
                     addChatMessage(message);
                 } else if (message.type === 'users_update') {
@@ -1186,7 +1193,7 @@
             ws.onclose = () => {
                 console.log('Disconnected from WebSocket server.');
                 setConnectionStatus(false);
-                showToast('Disconnected. Retrying to connect...', '#dc3545');
+                showToast('Sin conexión. Reintentando…', '#dc3545');
                 setTimeout(initializeApp, RECONNECT_DELAY);
             };
 
@@ -1213,10 +1220,10 @@
         function setConnectionStatus(connected) {
             if (connected) {
                 statusDot.className = 'status-dot';
-                statusText.textContent = 'Connected - Real-time sync active';
+                statusText.textContent = 'Conectado: todo al momento';
             } else {
                 statusDot.className = 'status-dot offline';
-                statusText.textContent = 'Offline - Changes will sync when reconnected';
+                statusText.textContent = 'Sin conexión: se sincroniza al volver';
             }
         }
 
@@ -1254,7 +1261,7 @@
                 // Switch back to rich text mode
                 editor.innerHTML = htmlContent;
                 editor.contentEditable = true;
-                modeBtn.textContent = 'HTML Mode';
+                modeBtn.textContent = 'Modo HTML';
                 modeBtn.style.background = '#17a2b8';
                 editor.style.fontFamily = "'Georgia', 'Times New Roman', serif";
                 isHtmlMode = false;
@@ -1284,7 +1291,7 @@
                 editor.innerHTML = '';
                 editor.appendChild(textarea);
                 editor.contentEditable = false;
-                modeBtn.textContent = 'Rich Text Mode';
+                modeBtn.textContent = 'Modo texto';
                 modeBtn.style.background = '#dc3545';
                 textarea.focus();
                 isHtmlMode = true;
@@ -1319,12 +1326,15 @@
 
         function copyText() {
             const content = isHtmlMode ? htmlContent : editor.innerHTML;
+            guardarEnHistorial(isHtmlMode
+                ? new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent || ''
+                : editor.innerText || editor.textContent || '');
             const plainText = isHtmlMode ? 
                 new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent || '' :
                 editor.textContent || editor.innerText || '';
                 
             if (content.trim() === '' || plainText.trim() === '') {
-                alert('Nothing to copy!');
+                showToast('No hay nada que copiar', '#dc3545');
                 return;
             }
             
@@ -1335,21 +1345,26 @@
                         'text/plain': new Blob([plainText], { type: 'text/plain' })
                     });
                     navigator.clipboard.write([clipboardItem]).then(() => {
-                        showToast('Rich text copied to clipboard with formatting!');
+                        showToast('Copiado, con formato');
+                    }).catch(() => {
+                        // el navegador no deja escribir el portapapeles (http en el móvil, permisos): el método de siempre
+                        selectAllText();
+                        const ok = document.execCommand('copy');
+                        showToast(ok ? 'Copiado' : 'Seleccionado: pulsa Copiar en el menú del sistema');
                     });
                 } else {
                     selectAllText();
                     document.execCommand('copy');
-                    showToast('Content copied to clipboard!');
+                    showToast('Copiado');
                 }
             } catch (err) {
                 selectAllText();
-                showToast('Content selected. Press Ctrl+C to copy.');
+                showToast('Seleccionado: pulsa Ctrl+C (o Copiar) para copiarlo');
             }
         }
 
         function clearText() {
-            if (confirm('Are you sure you want to clear all content? This will affect all users editing this document.')) {
+            if (confirm('¿Borrar todo el contenido? Se borra también en los demás dispositivos.')) {
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({ type: 'update', content: '' }));
                 }
@@ -1366,7 +1381,7 @@
                 updateCounts();
                 togglePlaceholder();
                 editor.focus();
-                showToast('Document cleared for all users!');
+                showToast('Nota borrada en todos los dispositivos');
             }
         }
 
@@ -1377,16 +1392,16 @@
                 editor.textContent || editor.innerText || '';
                 
             if (content.trim() === '' || plainText.trim() === '') {
-                alert('Nothing to download!');
+                showToast('No hay nada que descargar', '#dc3545');
                 return;
             }
             
             const htmlDoc = `<!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Collaborative Notes Export</title>
+    <title>CopyPaste (exportada)</title>
     <style>
         body {
             font-family: Georgia, 'Times New Roman', serif;
@@ -1423,7 +1438,7 @@ ${content}
                 editor.textContent || editor.innerText || '';
                 
             if (plainText.trim() === '') {
-                alert('Nothing to download!');
+                showToast('No hay nada que descargar', '#dc3545');
                 return;
             }
             
@@ -1443,12 +1458,12 @@ ${content}
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            showToast(`${extension.toUpperCase()} download started!`);
+            showToast(`Descargando ${extension.toUpperCase()}`);
         }
 
         function formatText(command) {
             if (isHtmlMode) {
-                showToast('Switch to Rich Text mode to use formatting tools');
+                showToast('Pasa al modo texto para dar formato');
                 return;
             }
             
@@ -1462,8 +1477,104 @@ ${content}
             
             setTimeout(() => {
                 handleInput();
-                showToast('Formatted content pasted successfully!');
+                showToast('Pegado con formato');
             }, 10);
+        }
+
+        // ── pegar y el historial de lo copiado (23/11/2026) ──
+        async function pegarPortapapeles() {
+            if (isHtmlMode) return showToast('Pasa al modo texto para pegar', '#dc3545');
+            if (!(navigator.clipboard && navigator.clipboard.readText)) {
+                return showToast('Este navegador no deja leer el portapapeles aquí: mantén pulsado en la nota y elige Pegar', '#f39c12');
+            }
+            try {
+                const texto = await navigator.clipboard.readText();
+                if (!texto) return showToast('No tienes nada copiado', '#f39c12');
+                editor.focus();
+                document.execCommand('insertText', false, texto);
+                handleInput();
+                showToast('Pegado');
+            } catch {
+                showToast('El navegador no ha dado permiso para leer el portapapeles', '#dc3545');
+            }
+        }
+
+        const HISTORIAL_MAX = 10;
+
+        function leerHistorial() {
+            try {
+                return JSON.parse(localStorage.getItem('historial') || '[]');
+            } catch {
+                return [];
+            }
+        }
+
+        function guardarEnHistorial(texto) {
+            texto = String(texto || '').trim().slice(0, 5000);
+            if (!texto) return;
+            const lista = [{ t: Date.now(), texto }, ...leerHistorial().filter((h) => h.texto !== texto)].slice(0, HISTORIAL_MAX);
+            try {
+                localStorage.setItem('historial', JSON.stringify(lista));
+            } catch {
+                // sin almacenamiento (modo privado): no hay historial, sin más
+            }
+        }
+
+        function copiarTexto(texto) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                return navigator.clipboard.writeText(texto).then(() => true, () => copiarTextoAntiguo(texto));
+            }
+            return Promise.resolve(copiarTextoAntiguo(texto));
+        }
+
+        function copiarTextoAntiguo(texto) {
+            const area = document.createElement('textarea');
+            area.value = texto;
+            area.style.cssText = 'position:fixed;opacity:0';
+            document.body.appendChild(area);
+            area.select();
+            const ok = document.execCommand('copy');
+            area.remove();
+            return ok;
+        }
+
+        function verHistorial() {
+            document.getElementById('capaHistorial')?.remove();
+            const lista = leerHistorial();
+            const capa = document.createElement('div');
+            capa.id = 'capaHistorial';
+            capa.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:2000;padding:16px';
+            const caja = document.createElement('div');
+            caja.style.cssText = 'background:' + (isDarkMode ? '#1e293b' : '#fff') + ';color:inherit;border-radius:12px;max-width:520px;width:100%;max-height:80vh;overflow:auto;padding:16px';
+            const titulo = document.createElement('h3');
+            titulo.textContent = 'Lo último que has copiado aquí';
+            titulo.style.marginBottom = '12px';
+            caja.appendChild(titulo);
+            if (!lista.length) {
+                const vacio = document.createElement('p');
+                vacio.textContent = 'Todavía nada. Lo que copies con «Copiar todo» aparecerá aquí.';
+                caja.appendChild(vacio);
+            }
+            for (const h of lista) {
+                const fila = document.createElement('button');
+                fila.className = 'btn';
+                fila.style.cssText = 'display:block;width:100%;text-align:left;margin:6px 0;white-space:pre-wrap;word-break:break-word';
+                fila.textContent = new Date(h.t).toLocaleString('es') + '\n' + (h.texto.length > 160 ? h.texto.slice(0, 160) + '…' : h.texto);
+                fila.onclick = async () => {
+                    showToast((await copiarTexto(h.texto)) ? 'Copiado' : 'No se pudo copiar', '#28a745');
+                    capa.remove();
+                };
+                caja.appendChild(fila);
+            }
+            const cerrar = document.createElement('button');
+            cerrar.className = 'btn secondary';
+            cerrar.textContent = 'Cerrar';
+            cerrar.style.marginTop = '8px';
+            cerrar.onclick = () => capa.remove();
+            caja.appendChild(cerrar);
+            capa.appendChild(caja);
+            capa.onclick = (e) => { if (e.target === capa) capa.remove(); };
+            document.body.appendChild(capa);
         }
 
         function showToast(message, color = '#28a745') {
@@ -1540,13 +1651,13 @@ ${content}
         function toggleDarkMode() {
             isDarkMode = !isDarkMode;
             document.body.classList.toggle('dark-mode', isDarkMode);
-            darkModeBtn.textContent = isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode';
+            darkModeBtn.textContent = isDarkMode ? '☀️ Claro' : '🌙 Oscuro';
             localStorage.setItem('darkMode', isDarkMode);
         }
 
         function toggleSounds() {
             soundsEnabled = !soundsEnabled;
-            soundBtn.textContent = soundsEnabled ? '🔊 Sounds' : '🔇 Muted';
+            soundBtn.textContent = soundsEnabled ? '🔊 Sonidos' : '🔇 Sin sonido';
             localStorage.setItem('soundsEnabled', soundsEnabled);
             showNotification(soundsEnabled ? 'Sounds enabled' : 'Sounds disabled', 'success');
         }
@@ -1558,7 +1669,7 @@ ${content}
         }
 
         function changeUserName() {
-            const newName = prompt('Enter your name:', userName);
+            const newName = prompt('¿Cómo te llamas en este dispositivo?', userName);
             if (newName && newName.trim() !== '') {
                 userName = newName.trim();
 
@@ -1583,7 +1694,7 @@ ${content}
                 // Save name to localStorage
                 localStorage.setItem('userName', userName);
 
-                showToast(`Name changed to: ${userName}`);
+                showToast(`Ahora eres ${userName}`);
             }
         }
 
@@ -1722,13 +1833,18 @@ ${content}
         // Initialize new features
         function initializeNewFeatures() {
             // Load dark mode preference
-            const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-            if (savedDarkMode) {
+            // sin preferencia guardada, el tema del sistema (claro u oscuro)
+            const guardado = localStorage.getItem('darkMode');
+            const oscuro = guardado === null
+                ? window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+                : guardado === 'true';
+            if (oscuro) {
                 toggleDarkMode();
+                if (guardado === null) localStorage.removeItem('darkMode');
             }
 
             // Load sound preference and update button
-            soundBtn.textContent = soundsEnabled ? '🔊 Sounds' : '🔇 Muted';
+            soundBtn.textContent = soundsEnabled ? '🔊 Sonidos' : '🔇 Sin sonido';
 
             // Add current user
             connectedUsers.set(userId, {
@@ -1801,9 +1917,9 @@ ${content}
                 highlightSearchResults();
                 currentSearchIndex = 0;
                 highlightCurrentResult();
-                searchStatus.textContent = `Found ${searchResults.length} matches`;
+                searchStatus.textContent = `${searchResults.length} coincidencias`;
             } else {
-                searchStatus.textContent = 'No matches found';
+                searchStatus.textContent = 'Sin coincidencias';
             }
         }
 
@@ -1870,7 +1986,7 @@ ${content}
             });
 
             if (searchResults.length > 0) {
-                searchStatus.textContent = `${currentSearchIndex + 1} of ${searchResults.length}`;
+                searchStatus.textContent = `${currentSearchIndex + 1} de ${searchResults.length}`;
             }
         }
 
@@ -1930,8 +2046,8 @@ ${content}
             handleInput();
             clearSearchHighlights();
             searchResults = [];
-            searchStatus.textContent = `Replaced ${count} occurrences`;
-            showNotification(`Replaced ${count} occurrences`, 'success');
+            searchStatus.textContent = `${count} reemplazadas`;
+            showNotification(`${count} reemplazadas`, 'success');
         }
 
         // Typing Indicators
