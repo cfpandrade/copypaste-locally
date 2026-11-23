@@ -6,9 +6,11 @@
 
 name: Publicar imagen
 
+# Nunca en pull_request: el repositorio es público y el código de un fork no debe llegar a construir ni a publicar.
 on:
   push:
     branches: [main]
+    tags: ['v*', '3.*']
     # Cambiar el README no justifica reconstruir la imagen.
     paths-ignore:
       - '**.md'
@@ -24,6 +26,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # para firmar la procedencia de la imagen (attestation de GitHub): se comprueba con
+      # gh attestation verify oci://ghcr.io/cfpandrade/copypaste-locally:<versión> --owner cfpandrade
+      id-token: write
+      attestations: write
 
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +49,7 @@ jobs:
         run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
 
       - name: Construir y publicar
+        id: construir
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -55,6 +62,13 @@ jobs:
             ${{ env.IMAGEN }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Firmar la procedencia
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.IMAGEN }}
+          subject-digest: ${{ steps.construir.outputs.digest }}
+          push-to-registry: true
 
       - name: Resumen
         run: |

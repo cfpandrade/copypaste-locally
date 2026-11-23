@@ -71,6 +71,15 @@ ghcr.io/cfpandrade/copypaste-locally:<commit>
 La versión sale de `package.json`: súbela en cada cambio que se publique. El
 servidor (CT117) se recrea con la versión nueva en cuanto aparece.
 
+El repositorio es público para que cualquiera lo use o haga un fork, pero solo
+el propietario puede publicar: la rama `main` y las etiquetas de versión están
+protegidas, y la imagen solo se construye desde `main` (nunca desde una PR).
+Cada imagen lleva su procedencia firmada por GitHub; para comprobarla:
+
+```bash
+gh attestation verify oci://ghcr.io/cfpandrade/copypaste-locally:3.1.0 --owner cfpandrade
+```
+
 ## Con Docker
 
 ```bash
