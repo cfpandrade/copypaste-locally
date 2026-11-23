@@ -20,13 +20,51 @@ const MAX_ARCHIVO = 50 * 1024 * 1024;
 const ESPERA_GUARDADO = 600;
 // Cada cuánto se comprueba que las conexiones siguen vivas.
 const LATIDO = 30000;
+// Los archivos compartidos son de paso: a las ARCHIVOS_HORAS se borran del disco.
+const CADUCIDAD_ARCHIVOS = (Number(process.env.ARCHIVOS_HORAS) || 24) * 3600 * 1000;
+const LIMPIEZA = 30 * 60 * 1000;
+// Redes que pueden entrar (IPv4 en CIDR, separadas por comas): vacío = todas. Se mira la IP de la conexión, no
+// cabeceras que cualquiera puede inventarse; detrás de un proxy hay que incluir la IP del proxy.
+const REDES = String(process.env.REDES_PERMITIDAS || '')
+    .split(',')
+    .map((r) => r.trim())
+    .filter(Boolean);
 
 const app = express();
 // Detrás de un proxy (nginx, Cloudflare...), sin esto req.protocol siempre
 // diría "http" y no se vería el dominio real por el que entra la gente.
 app.set('trust proxy', true);
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server, maxPayload: MAX_MENSAJE });
+const wss = new WebSocket.Server({
+    server,
+    maxPayload: MAX_MENSAJE,
+    verifyClient: ({ req }) => permitida(req.socket.remoteAddress),
+});
+
+function aNumero(ip) {
+    const partes = String(ip || '').replace(/^::ffff:/, '').split('.').map(Number);
+    if (partes.length !== 4 || partes.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null;
+    return ((partes[0] << 24) | (partes[1] << 16) | (partes[2] << 8) | partes[3]) >>> 0;
+}
+
+function permitida(ip, redes = REDES) {
+    if (!redes.length) return true;
+    if (ip === '::1' || ip === '127.0.0.1' || ip === '::ffff:127.0.0.1') return true; // el healthcheck del contenedor
+    const n = aNumero(ip);
+    if (n === null) return false;
+    return redes.some((red) => {
+        const [base, bits = '32'] = red.split('/');
+        const b = aNumero(base);
+        const m = Number(bits);
+        if (b === null || !(m >= 0 && m <= 32)) return false;
+        const mascara = m === 0 ? 0 : (~0 << (32 - m)) >>> 0;
+        return (n & mascara) === (b & mascara);
+    });
+}
+
+app.use((req, res, next) =>
+    permitida(req.socket.remoteAddress) ? next() : res.status(403).send('Fuera de la red permitida')
+);
 
 for (const carpeta of [DATOS, CARPETA_DOCS, CARPETA_ARCHIVOS]) {
     fs.mkdirSync(carpeta, { recursive: true });
@@ -118,6 +156,42 @@ async function guardarTodoYa() {
 // Los archivos se guardan aparte y en el chat solo viaja su identificador. Ese
 // identificador es largo y aleatorio: quien no lo recibe, no puede adivinarlo.
 const archivos = new Map();
+// El índice vive en disco, junto a los archivos: tras un reinicio los enlaces siguen funcionando.
+const INDICE = path.join(CARPETA_ARCHIVOS, 'indice.json');
+
+async function guardarIndice() {
+    const temporal = INDICE + '.tmp';
+    await fsp.writeFile(temporal, JSON.stringify([...archivos.values()]), 'utf8');
+    await fsp.rename(temporal, INDICE);
+}
+
+async function cargarIndice() {
+    try {
+        for (const a of JSON.parse(await fsp.readFile(INDICE, 'utf8'))) {
+            if (a && /^[0-9a-f]{32}$/.test(a.id)) archivos.set(a.id, a);
+        }
+    } catch {
+        // sin índice (primera vez) o roto: se empieza vacío y la limpieza recoge lo que sobre
+    }
+}
+
+// Borra lo caducado y lo que no está en el índice (archivos de antes de que existiera, o de un fallo a medias).
+async function limpiarArchivos(ahora = Date.now()) {
+    let cambios = false;
+    for (const [id, a] of archivos) {
+        if (ahora - a.cuando > CADUCIDAD_ARCHIVOS) {
+            archivos.delete(id);
+            await fsp.unlink(path.join(CARPETA_ARCHIVOS, id)).catch(() => {});
+            cambios = true;
+        }
+    }
+    for (const f of await fsp.readdir(CARPETA_ARCHIVOS).catch(() => [])) {
+        if (/^[0-9a-f]{32}$/.test(f) && !archivos.has(f)) {
+            await fsp.unlink(path.join(CARPETA_ARCHIVOS, f)).catch(() => {});
+        }
+    }
+    if (cambios) await guardarIndice().catch((err) => console.error('No se pudo guardar el índice:', err.message));
+}
 
 function nombreSeguro(texto) {
     return String(texto || 'archivo')
@@ -149,6 +223,7 @@ app.put(
             tamano: req.body.length,
             cuando: Date.now(),
         });
+        await guardarIndice().catch((err) => console.error('No se pudo guardar el índice:', err.message));
         res.json({ ok: true, ...archivos.get(id) });
     }
 );
@@ -169,6 +244,24 @@ app.get('/api/archivos/:id', (req, res) => {
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'copy.html')));
 
 app.get('/api/documentos', async (req, res) => res.json(await listaDocs()));
+
+// Para instalarla en el móvil como una app más (pantalla de inicio, sin barra del navegador).
+app.get('/manifest.webmanifest', (req, res) =>
+    res.type('application/manifest+json').json({
+        name: 'CopyPaste',
+        short_name: 'CopyPaste',
+        description: 'Copiar y pegar entre los dispositivos de casa',
+        start_url: '/',
+        display: 'standalone',
+        background_color: '#1e293b',
+        theme_color: '#1e293b',
+        lang: 'es',
+        icons: [
+            { src: '/icono-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/icono-512.png', sizes: '512x512', type: 'image/png' },
+        ],
+    })
+);
 
 // Código QR de la dirección desde la que se está entrando, para abrirlo en el
 // móvil apuntando con la cámara en vez de teclear una IP.
@@ -423,7 +516,7 @@ setInterval(() => {
         ws.vivo = false;
         ws.ping();
     }
-}, LATIDO);
+}, LATIDO).unref();
 
 // --- arranque y parada --------------------------------------------------------
 
@@ -445,7 +538,13 @@ async function cerrar() {
 process.on('SIGTERM', cerrar);
 process.on('SIGINT', cerrar);
 
-migrarDocumentoAntiguo().then(() => {
+setInterval(() => limpiarArchivos().catch(() => {}), LIMPIEZA).unref();
+
+module.exports = { permitida, limpiarArchivos, archivos, cargarIndice, CADUCIDAD_ARCHIVOS };
+
+if (require.main === module) migrarDocumentoAntiguo().then(async () => {
+    await cargarIndice();
+    await limpiarArchivos();
     server.listen(PUERTO, () => {
         console.log(`Servidor escuchando en http://localhost:${PUERTO}`);
     });

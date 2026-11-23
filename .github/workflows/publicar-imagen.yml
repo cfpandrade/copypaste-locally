@@ -38,15 +38,20 @@ jobs:
       - name: Preparar el constructor
         uses: docker/setup-buildx-action@v3
 
+      - name: Leer la versión
+        id: version
+        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+
       - name: Construir y publicar
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          # latest es la que usa el servidor; la del commit permite volver a
-          # una versión concreta si algo sale mal.
+          # latest es la que usa el servidor; la versión (package.json) es la que despliega Gilfoyle en el CT117,
+          # y la del commit permite volver a un punto concreto si algo sale mal.
           tags: |
             ${{ env.IMAGEN }}:latest
+            ${{ env.IMAGEN }}:${{ steps.version.outputs.version }}
             ${{ env.IMAGEN }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -55,6 +60,6 @@ jobs:
         run: |
           echo "### Imagen publicada" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo '`${{ env.IMAGEN }}:latest`' >> $GITHUB_STEP_SUMMARY
+          echo '`${{ env.IMAGEN }}:latest`, `${{ env.IMAGEN }}:${{ steps.version.outputs.version }}`' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Ya puedes pulsar **Update** en Dockge." >> $GITHUB_STEP_SUMMARY
+          echo "La despliega Gilfoyle en el CT117." >> $GITHUB_STEP_SUMMARY
